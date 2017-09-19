@@ -19,12 +19,34 @@
 #
 ##############################################################################
 
-from odoo import models, api
+from odoo import models, fields, api
+
+
+class Partner(models.Model):
+    _inherit = 'res.partner'
+
+    main_nace_id = fields.Many2one(
+        'res.partner.category', string='Main economical activity')
 
 
 class PartnerCategory(models.Model):
     """Let users search on code without a dot"""
     _inherit = 'res.partner.category'
+
+    is_nace_category = fields.Boolean(default=False)
+
+    @api.multi
+    def name_get(self):
+        """
+        Always use short name for NACE categories,
+        as they usually are very long
+        """
+        nace_categories = self.filtered('is_nace_category').with_context(
+            partner_category_display='short')
+        res_nace = super(PartnerCategory, nace_categories).name_get()
+        non_nace_categories = self - nace_categories
+        res_non_nace = super(PartnerCategory, non_nace_categories).name_get()
+        return res_nace + res_non_nace
 
     @api.model
     def name_search(self, name, args=None, operator='ilike', limit=100):
